@@ -1,0 +1,82 @@
+name: CI
+
+# Formula/dud.rb is written by the release workflow in wojciechpolak/dud, so
+# what arrives here has never been built by anyone. This builds it.
+#
+# A formula can be valid Ruby, pass audit, and still not produce a working
+# client, so the gate is an actual source install on both platforms the client
+# supports, followed by asking the installed binary what version it is. That
+# last question is the one that catches a formula whose build silently dropped
+# the version injection: the binary would run, report "dev", and disagree with
+# the formula that installed it.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Style and audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Homebrew and this tap
+        id: tap
+        uses: Homebrew/actions/setup-homebrew@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+
+      - name: Formula style
+        run: brew style "${{ steps.tap.outputs.tap-name }}/dud"
+
+      - name: Formula audit
+        run: brew audit --strict --formula "${{ steps.tap.outputs.tap-name }}/dud"
+
+  install:
+    name: Source install (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Set up Homebrew and this tap
+        id: tap
+        uses: Homebrew/actions/setup-homebrew@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+
+      # Bottles are not published for this tap, and a bottle would not exercise
+      # the formula's build anyway. This is the path a user takes.
+      - name: Install from source
+        env:
+          FORMULA: ${{ steps.tap.outputs.tap-name }}/dud
+        run: brew install --build-from-source "$FORMULA"
+
+      # `dud --version` prints the string compiled in at build time. When it
+      # matches the formula, the version in the tap, the tag the source came
+      # from, and the binary on disk are all one number.
+      - name: The installed client reports the formula version
+        env:
+          FORMULA: ${{ steps.tap.outputs.tap-name }}/dud
+        run: |
+          expected="$(brew info --json=v2 --formula "$FORMULA" | jq -r '.formulae[0].versions.stable')"
+          actual="$(dud --version)"
+          if [ "$expected" != "$actual" ]; then
+            echo "formula installs $expected but the client reports $actual" >&2
+            exit 1
+          fi
+          echo "dud $actual"
+
+      # The helpers the client shells out to are runtime dependencies, so a
+      # completed install has to have put them on PATH.
+      - name: The helpers the client calls are installed
+        run: |
+          for helper in age age-keygen git qrencode; do
+            command -v "$helper" || { echo "$helper is missing after install" >&2; exit 1; }
+          done
+
+      - name: Formula test block
+        env:
+          FORMULA: ${{ steps.tap.outputs.tap-name }}/dud
+        run: brew test "$FORMULA"

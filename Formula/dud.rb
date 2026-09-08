@@ -8,8 +8,8 @@
 class Dud < Formula
   desc "Discreet upload / download over dead drops and paired peers"
   homepage "https://github.com/wojciechpolak/dud"
-  url "https://github.com/wojciechpolak/dud/archive/refs/tags/v2.1.0.tar.gz"
-  sha256 "154597c562a5bd4b09a18a7c02e94eef6f7b4d2ab680fca1c111ed58ac15152a"
+  url "https://github.com/wojciechpolak/dud/archive/refs/tags/v2.2.0.tar.gz"
+  sha256 "7c8552552879190ee8ebd5d765423843f44a73ce641523136cc752044aa47014"
   license "MIT"
 
   depends_on "go" => :build

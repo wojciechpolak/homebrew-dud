@@ -6,10 +6,10 @@
 # not this file.
 
 class Dud < Formula
-  desc "Discreet upload / download over dead drops and paired peers"
+  desc "Discreet upload / download over dead drops, peers and optical"
   homepage "https://github.com/wojciechpolak/dud"
-  url "https://github.com/wojciechpolak/dud/archive/refs/tags/v2.7.0.tar.gz"
-  sha256 "41b39d625f5cf395de4ae6b7dd39979e328f936bbaaf40b909be89deccb20b9e"
+  url "https://github.com/wojciechpolak/dud/archive/refs/tags/v3.0.0.tar.gz"
+  sha256 "13c4b3341d11cafec16a032186fa6aebce431d2fb144ddccb7d52aeaa5f59015"
   license "MIT"
 
   depends_on "go" => :build
@@ -25,7 +25,18 @@ class Dud < Formula
     end
   end
 
+  def caveats
+    <<~EOS
+      This formula installs the headless client. Optical transfer upload needs
+      --optical-renderer kitty for compatible pixel terminals, or
+      --optical-renderer terminal for ANSI block glyphs. For a window, install the verified desktop
+      package with its sibling dud-optical-window helper.
+      dud capabilities --local reports the installed capability set offline.
+    EOS
+  end
+
   test do
     assert_equal version.to_s, shell_output("#{bin}/dud --version").strip
+    assert_match '"variant": "headless"', shell_output("#{bin}/dud capabilities --local --json")
   end
 end
